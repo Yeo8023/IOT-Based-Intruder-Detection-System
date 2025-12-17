@@ -1,0 +1,15 @@
+# Python Standard
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Project Specific
+intruders/
+serviceAccountKey.json
+service-account-key.json
+*.log
+
+# OS Specific
+.DS_Store
+Thumbs.db

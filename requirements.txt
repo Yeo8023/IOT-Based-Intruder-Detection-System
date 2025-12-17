@@ -1,0 +1,12 @@
+# Core Dependencies
+numpy<2.0.0
+opencv-python
+face_recognition
+pyserial
+
+# Cloud Dependencies
+firebase-admin
+google-cloud-storage
+
+# Note: dlib is a dependency of face_recognition. 
+# On Windows, you typically need to install it via a pre-built wheel first.
