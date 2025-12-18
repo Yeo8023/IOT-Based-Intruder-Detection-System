@@ -8,5 +8,7 @@ pyserial
 firebase-admin
 google-cloud-storage
 
-# Note: dlib is a dependency of face_recognition. 
-# On Windows, you typically need to install it via a pre-built wheel first.
+# Dashboard Dependencies
+streamlit
+pandas
+plotly
