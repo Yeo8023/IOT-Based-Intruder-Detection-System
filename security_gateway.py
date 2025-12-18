@@ -96,6 +96,8 @@ def log_event_to_firestore(name, status, image_url=None):
 
     data = {
         "timestamp": firestore.SERVER_TIMESTAMP,
+        "datetime_str": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "unix_timestamp": time.time(),
         "name": name,
         "status": status,
         "device": "Laptop_Gateway"
