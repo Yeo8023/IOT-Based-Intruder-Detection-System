@@ -178,53 +178,62 @@ def process_camera(known_encodings, known_names):
     face_locs = face_recognition.face_locations(rgb_frame, model=MODEL)
     face_encs = face_recognition.face_encodings(rgb_frame, face_locs)
 
-    person_name = "Unknown"
-    is_intruder = True
-
     if not face_locs:
         print("[RESULT] No face detected.")
         cap.release()
         return
 
-    # Check matches (Best Match Logic)
-    for encoding in face_encs:
-        # Distance check
+    any_intruder_detected = False
+    log_entries = [] # To store logs (Name, Status)
+
+    # LOOP through all faces found
+    for (top, right, bottom, left), encoding in zip(face_locs, face_encs):
+        person_name = "Unknown"
+        is_intruder_face = True
+        
+        # Check matches (Best Match Logic)
         distances = face_recognition.face_distance(known_encodings, encoding)
         if len(distances) > 0:
             best_idx = np.argmin(distances)
             if distances[best_idx] < TOLERANCE:
                 person_name = known_names[best_idx]
-                is_intruder = False
-                break # Found a known person, stop checking
-    
-    # --- VISUALIZATION & DECISION ---
-    
-    # Draw results on frame for user feedback
-    top, right, bottom, left = (face_locs[0]) # Use first detected face for visualization
-    color = (0, 0, 255) if is_intruder else (0, 255, 0)
-    label = "INTRUDER" if is_intruder else person_name
-    
-    # Draw box and label
-    cv2.rectangle(frame, (left, top), (right, bottom), color, 3)
-    cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
-    cv2.putText(frame, label, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 255), 2)
-    
+                is_intruder_face = False
+        
+        # Logic Aggregation
+        if is_intruder_face:
+            any_intruder_detected = True
+        
+        log_entries.append((person_name, "Intruder" if is_intruder_face else "Authorized"))
+
+        # --- VISUALIZATION DRAWING (Per Face) ---
+        color = (0, 0, 255) if is_intruder_face else (0, 255, 0)
+        label = "INTRUDER" if is_intruder_face else person_name
+        
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 3)
+        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
+        cv2.putText(frame, label, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 255), 2)
+
     # Show the result for 3 seconds
     cv2.imshow('Security Provision', frame)
     cv2.waitKey(3000) 
 
-    if not is_intruder:
-        # Case A: Authorized
-        print(f"✅ Welcome, {person_name}!")
-        log_event_to_firestore(person_name, "Authorized")
-    else:
-        # Case B: Intruder
+    # --- DECISION (Aggregated) ---
+    
+    # 1. Log EVERYONE seen
+    for name, status in log_entries:
+         if status == "Authorized":
+             print(f"✅ Welcome, {name}!")
+             log_event_to_firestore(name, "Authorized")
+         # We delay logging intruders until we decide if we need to save the image
+
+    if any_intruder_detected:
+        # Case B: At least one Intruder
         print("🚨 INTRUDER DETECTED! 🚨")
         
         # 1. Hardware Action
         trigger_buzzer()
         
-        # 2. Save Image
+        # 2. Save Image (Group shot if multiple people)
         if not os.path.exists(INTRUDERS_DIR): os.makedirs(INTRUDERS_DIR)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         img_name = f"intruder_{ts}.jpg"
@@ -235,8 +244,10 @@ def process_camera(known_encodings, known_names):
         # 3. Cloud Upload
         url = upload_image_to_bucket(local_path)
         
-        # 4. Log
-        log_event_to_firestore("Unknown", "Intruder", url)
+        # 4. Log the Intruders (with image)
+        for name, status in log_entries:
+            if status == "Intruder":
+                 log_event_to_firestore("Unknown", "Intruder", url)
 
     cap.release()
     cv2.destroyAllWindows()
