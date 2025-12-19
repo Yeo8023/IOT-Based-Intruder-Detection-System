@@ -1,0 +1,6 @@
+# Dashboard-only dependencies (Lightweight)
+streamlit
+pandas
+plotly
+firebase-admin
+google-cloud-storage
