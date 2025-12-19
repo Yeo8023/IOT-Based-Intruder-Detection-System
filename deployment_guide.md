@@ -7,8 +7,10 @@ I have already pushed the `Dockerfile` and `dashboard.py` updates to your reposi
 
 ## Step 2: Open Google Cloud Run
 1.  Go to [Google Cloud Console](https://console.cloud.google.com/).
-2.  Search for **"Cloud Run"** in the top search bar and click it.
-3.  Click **"CREATE SERVICE"** (top of the page).
+2.  **Direct Link**: Click this link to go straight to the creation page:
+    👉 [**Create Cloud Run Service**](https://console.cloud.google.com/run/create)
+
+3.  **Or Search**: Type "Cloud Run" in the top search bar, click it, and then look for the **"CREATE SERVICE"** button at the top header (or in the middle if you have no services).
 
 ## Step 3: Configure the Service
 1.  **Source**: Select **"Continuously deploy new revisions from a source repository"**.
