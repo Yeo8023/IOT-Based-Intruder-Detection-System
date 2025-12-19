@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import plotly.express as px
 import datetime
+import os
 
 # --- CONFIGURATION ---
 PAGE_TITLE = "IOT Security Dashboard"
