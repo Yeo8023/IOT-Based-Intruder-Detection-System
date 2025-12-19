@@ -14,14 +14,18 @@ GCP_KEY_PATH = "serviceAccountKey.json"
 st.set_page_config(page_title=PAGE_TITLE, layout="wide")
 st.title(f"🛡️ {PAGE_TITLE}")
 
-# Connect to Firestore (Singleton to avoid re-initializing on reload)
 @st.cache_resource
 def get_db():
     try:
         # Check if already initialized
         if not firebase_admin._apps:
-            cred = credentials.Certificate(GCP_KEY_PATH)
-            firebase_admin.initialize_app(cred)
+            if os.path.exists(GCP_KEY_PATH):
+                # Local Development with Key File
+                cred = credentials.Certificate(GCP_KEY_PATH)
+                firebase_admin.initialize_app(cred)
+            else:
+                # Cloud Run (Application Default Credentials)
+                firebase_admin.initialize_app()
         return firestore.client()
     except Exception as e:
         st.error(f"Failed to connect to Firestore: {e}")
