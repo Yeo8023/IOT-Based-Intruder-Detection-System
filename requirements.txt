@@ -1,7 +1,7 @@
 # Core Dependencies
 numpy<2.0.0
 opencv-python
-face_recognition
+face_recognition  # Requires dlib (Windows: install wheel first, see README)
 pyserial
 
 # Cloud Dependencies

@@ -6,13 +6,14 @@ import time
 import serial
 import serial.tools.list_ports
 import numpy as np
+import re
 
 # Cloud Libraries
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
 
 # --- CONFIGURATION ---
-SERIAL_PORT = "COM5"
+SERIAL_PORT = "COM3"
 BAUD_RATE = 9600
 KNOWN_FACES_DIR = "known_faces"
 INTRUDERS_DIR = "intruders"
@@ -22,6 +23,10 @@ COLLECTION_NAME = "security_logs"
 
 TOLERANCE = 0.5
 MODEL = "hog"
+
+# Camera Preview Settings
+PREVIEW_DURATION_SECONDS = 2  # How long to show preview before capturing
+SHOW_CAPTURED_RESULT = True  # Show the result with detection boxes
 
 # --- GLOBAL VARIABLES ---
 db = None
@@ -72,6 +77,17 @@ def trigger_buzzer():
             print(f"[ERROR] Serial write failed: {e}")
     else:
         print("[SIMULATION] Hardware Alarm Triggered (Buzzer ON)")
+
+def trigger_welcome_beep():
+    """Sends command to Microcontroller to play welcoming beep for authorized users."""
+    if ser:
+        try:
+            ser.write(b"WELCOME\n")
+            print("[Sent] WELCOME signal to hardware - Playing friendly beeps.")
+        except Exception as e:
+            print(f"[ERROR] Serial write failed: {e}")
+    else:
+        print("[SIMULATION] Hardware Welcome Beep (Short & Pleasant)")
 
 def upload_image_to_bucket(local_path):
     """Uploads file to GCS and returns public URL."""
@@ -131,8 +147,10 @@ def load_known_faces(directory):
                 face_encs = face_recognition.face_encodings(rgb)
                 if face_encs:
                     encodings.append(face_encs[0])
-                    # Name Parsing
+                    # Name Parsing - Remove numerical suffixes
                     basename = os.path.splitext(filename)[0]
+                    
+                    # First, handle underscore-separated suffixes (e.g., Name_1, Name_2)
                     if "_" in basename:
                          name_part = basename.rsplit('_', 1)[0]
                          suffix = basename.rsplit('_', 1)[1]
@@ -142,6 +160,11 @@ def load_known_faces(directory):
                              final_name = basename
                     else:
                         final_name = basename
+                    
+                    # Second, strip trailing digits directly appended to name (e.g., Name1, Name2, Name3)
+                    # Remove all trailing digits from the name
+                    final_name = re.sub(r'\d+$', '', final_name).strip()
+                    
                     names.append(final_name.title())
             except:
                 pass
@@ -149,38 +172,85 @@ def load_known_faces(directory):
 
 def process_camera(known_encodings, known_names):
     """
-    Opens camera, checks for ONE frame (or short duration), handles logic, then closes.
+    Opens camera, shows preview for positioning, then captures and analyzes frame.
+    Optimized for fast camera initialization.
     """
-    print("[ACTION] opening Camera for Verification...")
-    cap = cv2.VideoCapture(0)
+    print("[ACTION] Opening Camera for Verification...")
     
-    # Warmup
+    # Optimize camera opening speed
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Use DirectShow backend (faster on Windows)
+    
+    # Set camera properties BEFORE reading frames for faster initialization
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer for instant response
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Lower resolution = faster opening
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 30)  # Set explicit FPS
+    
+    # Check if camera opened
     if not cap.isOpened():
-        print("[ERROR] Camera failure.")
+        print("[ERROR] Camera failure - Could not open camera.")
         return
-
-    # Try to grab a valid frame for a few attempts
+    
+    print("[INFO] ✅ Camera Connected Successfully!")
+    
+    # Warmup: Discard first 3 frames (often dark/slow from camera startup)
+    for _ in range(3):
+        cap.read()
+    
+    print("[INFO] Showing preview... Position yourself in frame.")
+    print(f"[INFO] Capture will happen in {PREVIEW_DURATION_SECONDS} seconds...")
+    
+    # Show live preview to let user position themselves
+    preview_frames = PREVIEW_DURATION_SECONDS * 20  # 20 fps preview
     frame = None
-    for _ in range(5): 
+    
+    for i in range(preview_frames):
         ret, temp_frame = cap.read()
         if ret:
             frame = temp_frame
-            break
-        time.sleep(0.1)
+            
+            # Add text overlay showing countdown
+            display_frame = frame.copy()
+            seconds_left = PREVIEW_DURATION_SECONDS - (i // 20)
+            if seconds_left > 0:
+                text = f"Get Ready! Capturing in {seconds_left}..."
+                color = (0, 255, 255)  # Yellow
+            else:
+                text = "CAPTURING NOW!"
+                color = (0, 255, 0)  # Green
+            
+            # Draw text with background for better visibility
+            cv2.rectangle(display_frame, (40, 20), (700, 80), (0, 0, 0), -1)
+            cv2.putText(display_frame, text, (50, 60), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+            
+            # Show preview window
+            cv2.imshow('Security Check - Camera Preview', display_frame)
+            cv2.waitKey(1)
+        time.sleep(0.05)
+    
+    print("[INFO] 📸 Capturing frame for analysis...")
 
     if frame is None:
         print("[ERROR] Could not capture image.")
         cap.release()
+        cv2.destroyAllWindows()
         return
 
     # Process Frame
+    print("[INFO] Processing face detection...")
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype('uint8')
     face_locs = face_recognition.face_locations(rgb_frame, model=MODEL)
     face_encs = face_recognition.face_encodings(rgb_frame, face_locs)
 
     if not face_locs:
-        print("[RESULT] No face detected.")
+        print("[RESULT] ⚠️  No face detected in the captured frame.")
+        print("[TIP] Next time: Make sure you're visible in the preview window")
+        # Show the captured frame for reference
+        cv2.imshow('Security Check - No Face Detected', frame)
+        cv2.waitKey(3000)
         cap.release()
+        cv2.destroyAllWindows()
         return
 
     any_intruder_detected = False
@@ -219,12 +289,18 @@ def process_camera(known_encodings, known_names):
 
     # --- DECISION (Aggregated) ---
     
-    # 1. Log EVERYONE seen
+    # 1. Log EVERYONE seen and trigger appropriate sounds
+    authorized_detected = False
     for name, status in log_entries:
          if status == "Authorized":
              print(f"✅ Welcome, {name}!")
              log_event_to_firestore(name, "Authorized")
+             authorized_detected = True
          # We delay logging intruders until we decide if we need to save the image
+    
+    # 2. Play welcome beep for authorized users (only if NO intruders present)
+    if authorized_detected and not any_intruder_detected:
+        trigger_welcome_beep()
 
     if any_intruder_detected:
         # Case B: At least one Intruder

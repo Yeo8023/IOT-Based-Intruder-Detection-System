@@ -9,6 +9,10 @@ intruders/
 serviceAccountKey.json
 service-account-key.json
 *.log
+*.whl
+
+# Large binary files (dlib wheel)
+dlib-*.whl
 
 # OS Specific
 .DS_Store
