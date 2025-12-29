@@ -10,6 +10,16 @@ A smart security system that uses facial recognition to detect intruders and ale
 - **Web Dashboard** - Monitor security logs and view intruder evidence gallery
 - **Smart Alerts** - Welcome beep for authorized users, loud alarm for intruders
 
+## 🌍 SDG 11 Impact Analysis
+
+**Goal 11: Sustainable Cities and Communities**
+*Target 11.7: Provide universal access to safe, inclusive and accessible, green and public spaces.*
+
+This project directly contributes to Smart City safety by:
+1.  **Automated Surveillance**: Reducing the need for manual guarding of public/private spaces using 24/7 IoT monitoring.
+2.  **Crime Deterrence**: Immediate localized alarms (Buzzer) and cloud evidence storage deter unauthorized access.
+3.  **Data-Driven Security**: The centralized dashboard allows security personnel to monitor multiple entry points remotely, ensuring efficient resource allocation for urban safety.
+
 ## 🔧 Hardware Requirements
 
 - Maker Feather AIoT S3 (ESP32-S3) microcontroller
@@ -51,27 +61,26 @@ python -m venv venv
 
 ### 3. Install Python Dependencies
 
-**For Windows users**, install dlib first (requires pre-compiled wheel):
+**For Windows users**, you must install `dlib` manually first (it requires C++ tools otherwise).
 
-```bash
-# 1. Download the correct dlib wheel for YOUR Python version from:
-#    https://github.com/z-mahmud22/Dlib_Windows_Python3.x/releases
-#    
-#    Match the wheel to your version:
-#    - cp39 = Python 3.9
-#    - cp310 = Python 3.10
-#    - cp311 = Python 3.11
-#    - cp312 = Python 3.12
-#
-#    Save the downloaded .whl file to your project folder
+1.  **Download the correct wheel:**
+    Go to the [Dlib Repository](https://github.com/z-mahmud22/Dlib_Windows_Python3.x) and download the `.whl` file matching your Python version:
+    *   `cp39` → Python 3.9
+    *   `cp310` → Python 3.10 (*Recommended*)
+    *   `cp311` → Python 3.11
 
-# 2. Install the downloaded wheel from the project folder:
-#    (Make sure you're in the project directory where you saved the .whl file)
-pip install dlib-19.22.99-cp310-cp310-win_amd64.whl
+    *Save the file inside this project folder.*
 
-# 3. Install remaining dependencies:
-pip install -r requirements.txt
-```
+2.  **Install the wheel:**
+    ```bash
+    # Example for Python 3.10 (Update filename if yours is different)
+    pip install dlib-19.22.99-cp310-cp310-win_amd64.whl
+    ```
+
+3.  **Install remaining dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ### 4. Setup Firebase
 
@@ -136,12 +145,16 @@ Access at: http://localhost:8501
 ```
 IOT-Based-Intruder-Detection-System/
 ├── arduinocode.ino              # Microcontroller code
-├── security_gateway.py          # Main detection system
-├── dashboard.py                 # Web dashboard
-├── requirements.txt             # Python dependencies
-├── serviceAccountKey.json       # Firebase credentials (add this)
-├── known_faces/                 # Authorized people photos (create this)
-└── intruders/                   # Captured intruder photos (auto-created)
+├── security_gateway.py          # Main detection system (Edge)
+├── dashboard.py                 # Web dashboard (Cloud/App)
+├── Dockerfile                   # Cloud Run container config
+├── requirements.txt             # Project dependencies
+├── requirements_dashboard.txt   # Optimized Cloud dependencies
+├── serviceAccountKey.json       # Firebase credentials
+├── dlib-19.22.99-cp310-*.whl    # Facial recognition wheel
+├── known_faces/                 # Authorized people photos
+├── intruders/                   # Captured intruder photos
+└── .gitignore                   # Git configuration
 ```
 
 ## 🎛️ Configuration
@@ -171,8 +184,9 @@ Edit `security_gateway.py` to customize:
 
 This project is for educational purposes: CPC357 Project
 
-## 👨‍💻 Author
+## 👥 Group Members
 
-Lim Yong Jun (164598)
-Yeo Din Song (163369)
-
+| Name | Matric No. |
+| :--- | :--- |
+| **Lim Yong Jun** | 164598 |
+| **Yeo Din Song** | 163369 |
