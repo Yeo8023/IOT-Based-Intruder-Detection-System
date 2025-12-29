@@ -1,13 +1,13 @@
 # 🛡️ IOT-Based Intruder Detection System
 
-A smart security system that uses facial recognition to detect intruders and alerts through hardware buzzer and cloud logging.
+A smart security system that uses facial recognition to detect intruders and alerts through hardware buzzer and **Google Cloud Platform (GCP)** logging.
 
 ## 📋 Features
 
 - **Real-time Face Recognition** - Identifies authorized users vs intruders
 - **Hardware Integration** - PIR motion sensor + buzzer alarm on ESP32 microcontroller
-- **Cloud Logging** - Stores events and intruder photos in Firebase
-- **Web Dashboard** - Monitor security logs and view intruder evidence gallery
+- **Cloud Logging** - Stores events and intruder photos in **Google Cloud (Firestore & Storage)**
+- **Web Dashboard** - Real-time monitoring via **Cloud Run**
 - **Smart Alerts** - Welcome beep for authorized users, loud alarm for intruders
 
 ## 🌍 SDG 11 Impact Analysis
@@ -31,32 +31,34 @@ This project directly contributes to Smart City safety by:
 
 - Python 3.8 or higher
 - Arduino IDE (for microcontroller)
-- Google Firebase account
+- **Google Cloud Platform (GCP)** Account
 
 ## 🚀 Quick Setup
 
 ### 1. Check Your Python Version
 
+Run this command to check your installed version:
 ```bash
 python --version
-# Example output: Python 3.10.5 → You need Python 3.10 wheels
+# Output Example: Python 3.10.6
 ```
-
-Note your Python version (3.9, 3.10, 3.11, etc.) for the next step.
+> **Important:** Note your version (e.g., `3.9`, `3.10`, `3.11`) as you will need to download the matching wheel in Step 3.
 
 ### 2. Create Virtual Environment (Recommended)
 
+To avoid conflicts, create a virtual environment:
+
 ```bash
-# Navigate to project directory
+# 1. Navigate to project
 cd IOT-Based-Intruder-Detection-System
 
-# Create and activate virtual environment
+# 2. Create environment
 python -m venv venv
 
-# Activate:
-# Windows CMD: venv\Scripts\activate
-# Windows PowerShell: .\venv\Scripts\Activate
-# Linux/Mac: source venv/bin/activate
+# 3. Activate it (Run one):
+# Windows (CMD):        venv\Scripts\activate
+# Windows (PowerShell): .\venv\Scripts\Activate
+# Mac / Linux:          source venv/bin/activate
 ```
 
 ### 3. Install Python Dependencies
@@ -64,7 +66,7 @@ python -m venv venv
 **For Windows users**, you must install `dlib` manually first (it requires C++ tools otherwise).
 
 1.  **Download the correct wheel:**
-    Go to the [Dlib Repository](https://github.com/z-mahmud22/Dlib_Windows_Python3.x) and download the `.whl` file matching your Python version:
+    Go to the [Dlib Repository](https://github.com/z-mahmud22/Dlib_Windows_Python3.x/releases) and download the `.whl` file matching your Python version:
     *   `cp39` → Python 3.9
     *   `cp310` → Python 3.10 (*Recommended*)
     *   `cp311` → Python 3.11
@@ -82,12 +84,19 @@ python -m venv venv
     pip install -r requirements.txt
     ```
 
-### 4. Setup Firebase
+### 4. Setup Google Cloud Platform (GCP)
 
-1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Firestore Database and Storage
-3. Download service account key as `serviceAccountKey.json`
-4. Place it in the project root directory
+1.  Access the [Google Cloud Console](https://console.cloud.google.com/).
+2.  **Create a Project**: Select "New Project" and give it a name.
+3.  **Enable Services**:
+    *   **Firestore**: Search for "Firestore", select "Native Mode", and create a database.
+    *   **Cloud Storage**: Search for "Cloud Storage" and create a bucket (Project ID as name recommended).
+4.  **Get Credentials**:
+    *   Navigate to **IAM & Admin** → **Service Accounts**.
+    *   Click **Create Service Account** -> Name it "iot-gateway".
+    *   **Grant Roles**: Add `Cloud Datastore User` and `Storage Object Admin`.
+    *   Click the created account → **Keys** tab → **Add Key** → **Create new key (JSON)**.
+    *   Rename the downloaded file to `serviceAccountKey.json` and place it in this project root.
 
 ### 5. Configure Arduino
 
@@ -112,33 +121,39 @@ SERIAL_PORT = "COM3"  # Change to your microcontroller's COM port
 
 ## ▶️ Running the System
 
-### Start Security Gateway (Main System)
+### 1. Start Security Gateway (The "Edge" Brain)
+This runs on your laptop and connects to the microcontroller.
 
 ```bash
 python security_gateway.py
 ```
 
-This will:
-- Connect to Firebase
-- Connect to Arduino via serial
-- Wait for motion detection
-- Perform face recognition when motion is detected
+### 2. View the Dashboard (The "Cloud" View)
 
-### Start Dashboard (Optional)
-
+**Option A: Run Locally**
 ```bash
 streamlit run dashboard.py
 ```
-
 Access at: http://localhost:8501
+
+**Option B: Deploy to Google Cloud Run**
+To host clearly on the web (as per Technical Report):
+1.  Push this code to GitHub.
+2.  Go to [Google Cloud Console - Cloud Run](https://console.cloud.google.com/run).
+3.  Click **Create Service**.
+4.  Select **"Continuously deploy from a source repository"** and connect your GitHub.
+5.  Allow unauthenticated invocations (Public access).
+6.  Click **Create**.
+
+**Live Demo**: [Click Here to View Dashboard](https://security-dashboard-432472007208.asia-southeast1.run.app/)
 
 ## 📖 How It Works
 
 1. **PIR sensor detects motion** → Arduino sends "MOTION" signal to Python
 2. **Camera captures image** → Python performs face recognition
-3. **If authorized** → Welcome beep plays, logs to Firebase
-4. **If intruder** → Loud alarm plays, saves photo, uploads to cloud
-5. **View logs** → Dashboard shows all events and intruder photos
+3. **If authorized** → Welcome beep plays, logs to Firestore
+4. **If intruder** → Loud alarm plays, saves photo, uploads to Cloud Storage
+5. **View logs** → Cloud Dashboard shows all events and evidence
 
 ## 📁 Project Structure
 
