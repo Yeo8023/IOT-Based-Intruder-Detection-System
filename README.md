@@ -199,6 +199,10 @@ Edit `security_gateway.py` to customize:
 
 This project is for educational purposes: CPC357 Project
 
+## Video Link
+
+[This project is for educational purposes: CPC357 Project](https://youtu.be/NkvXhUGAGUI)
+
 ## 👥 Group Members
 
 | Name | Matric No. |
