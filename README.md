@@ -201,7 +201,7 @@ This project is for educational purposes: CPC357 Project
 
 ## Video Link
 
-[Demo](https://youtu.be/NkvXhUGAGUI)
+[Demo]([https://youtu.be/NkvXhUGAGUI](https://youtu.be/_0Nwt8RD9to))
 
 ## 👥 Group Members
 
